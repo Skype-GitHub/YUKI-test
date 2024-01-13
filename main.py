@@ -172,7 +172,7 @@ app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 app.mount("/css", StaticFiles(directory="./css"), name="static")
 app.mount("/word", StaticFiles(directory="./blog", html=True), name="static")
 app.add_middleware(GZipMiddleware, minimum_size=1000)
-
+app.mount("/info-z", StaticFiles(directory="./info", html=True), name="static")
 from fastapi.templating import Jinja2Templates
 template = Jinja2Templates(directory='templates').TemplateResponse
 
@@ -237,7 +237,7 @@ def playlist(list:str,response: Response,request: Request,page:Union[int,None]=1
     response.set_cookie("yuki","True",max_age=60 * 60 * 24 * 7)
     return template("search.html", {"request": request,"results":get_playlist(list,str(page)),"word":"","next":f"/playlist?list={list}","proxy":proxy})
 
-@app.get("/info", response_class=HTMLResponse)
+
 def viewlist(response: Response,request: Request,yuki: Union[str] = Cookie(None)):
     global apis,apichannels,apicomments
     if not(check_cokie(yuki)):
@@ -253,49 +253,22 @@ def suggest(keyword:str):
 def comments(request: Request,v:str):
     return template("comments.html",{"request": request,"comments":get_comments(v)})
 
-@app.get("/thumbnail")
-def thumbnail(v:str):
-    return Response(content = requests.get(fr"https://img.youtube.com/vi/{v}/0.jpg").content,media_type=r"image/jpeg")
 
-@app.get("/bbs",response_class=HTMLResponse)
-def view_bbs(request: Request,name: Union[str, None] = "",seed:Union[str,None]="",channel:Union[str,None]="main",verify:Union[str,None]="false",yuki: Union[str] = Cookie(None)):
-    if not(check_cokie(yuki)):
-        return redirect("/")
-    res = HTMLResponse(requests.get(fr"{url}bbs?name={urllib.parse.quote(name)}&seed={urllib.parse.quote(seed)}&channel={urllib.parse.quote(channel)}&verify={urllib.parse.quote(verify)}",cookies={"yuki":"True"}).text)
-    return res
+
+
 
 @cache(seconds=5)
 def bbsapi_cached(verify,channel):
     return requests.get(fr"{url}bbs/api?t={urllib.parse.quote(str(int(time.time()*1000)))}&verify={urllib.parse.quote(verify)}&channel={urllib.parse.quote(channel)}",cookies={"yuki":"True"}).text
 
-@app.get("/bbs/api",response_class=HTMLResponse)
-def view_bbs(request: Request,t: str,channel:Union[str,None]="main",verify: Union[str,None] = "false"):
-    print(fr"{url}bbs/api?t={urllib.parse.quote(t)}&verify={urllib.parse.quote(verify)}&channel={urllib.parse.quote(channel)}")
-    return bbsapi_cached(verify,channel)
 
-@app.get("/bbs/result")
-def write_bbs(request: Request,name: str = "",message: str = "",seed:Union[str,None] = "",channel:Union[str,None]="main",verify:Union[str,None]="false",yuki: Union[str] = Cookie(None)):
-    if not(check_cokie(yuki)):
-        return redirect("/")
-    t = requests.get(fr"{url}bbs/result?name={urllib.parse.quote(name)}&message={urllib.parse.quote(message)}&seed={urllib.parse.quote(seed)}&channel={urllib.parse.quote(channel)}&verify={urllib.parse.quote(verify)}&info={urllib.parse.quote(get_info(request))}",cookies={"yuki":"True"}, allow_redirects=False)
-    if t.status_code != 307:
-        return HTMLResponse(t.text)
-    return redirect(f"/bbs?name={urllib.parse.quote(name)}&seed={urllib.parse.quote(seed)}&channel={urllib.parse.quote(channel)}&verify={urllib.parse.quote(verify)}")
 
 @cache(seconds=30)
 def how_cached():
     return requests.get(fr"{url}bbs/how").text
 
-@app.get("/bbs/how",response_class=PlainTextResponse)
-def view_commonds(request: Request,yuki: Union[str] = Cookie(None)):
-    if not(check_cokie(yuki)):
-        return redirect("/")
-    return how_cached()
 
-@app.get("/load_instance")
-def home():
-    global url
-    url = requests.get(r'https://raw.githubusercontent.com/mochidukiyukimi/yuki-youtube-instance/main/instance.txt').text.rstrip()
+
 
 
 @app.exception_handler(500)
